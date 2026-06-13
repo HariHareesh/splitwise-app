@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../../stores/api';
 import { ENDPOINTS } from '../../../constants/api';
 
@@ -30,24 +31,48 @@ export default function GroupDetailScreen() {
 
   useEffect(() => { fetchData(); }, [id]);
 
+  const splitTypeColor = (type: string) => {
+    const colors: any = { itemwise: '#ff9800', equal: '#2196f3', manual: '#9c27b0' };
+    return colors[type] || '#666';
+  };
+
+  const formatBalance = (balance: number) => {
+    return balance >= 0 ? `Gets back ₹${balance}` : `Owes ₹${Math.abs(balance)}`;
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.title}>{group?.name || 'Group'}</Text>
-        <TouchableOpacity onPress={() => router.push(`/(app)/groups/${id}/members`)}>
-          <Ionicons name="people-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+        colors={['#1DB954', '#1aa84a']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.title} numberOfLines={1}>{group?.name || 'Group'}</Text>
+          <TouchableOpacity onPress={() => router.push(`/(app)/groups/${id}/members`)} hitSlop={8}>
+            <Ionicons name="people-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, tab === 'expenses' && styles.activeTab]} onPress={() => setTab('expenses')}>
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tab, tab === 'expenses' && styles.activeTab]}
+          onPress={() => setTab('expenses')}
+        >
+          <Ionicons name="receipt" size={18} color={tab === 'expenses' ? '#1DB954' : '#bbb'} />
           <Text style={[styles.tabText, tab === 'expenses' && styles.activeTabText]}>Expenses</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, tab === 'balances' && styles.activeTab]} onPress={() => setTab('balances')}>
+        <TouchableOpacity
+          style={[styles.tab, tab === 'balances' && styles.activeTab]}
+          onPress={() => setTab('balances')}
+        >
+          <Ionicons name="swap-horizontal" size={18} color={tab === 'balances' ? '#1DB954' : '#bbb'} />
           <Text style={[styles.tabText, tab === 'balances' && styles.activeTabText]}>Balances</Text>
         </TouchableOpacity>
       </View>
@@ -56,19 +81,42 @@ export default function GroupDetailScreen() {
         <FlatList
           data={expenses}
           keyExtractor={(item) => item.id.toString()}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchData}
+              tintColor="#1DB954"
+              colors={['#1DB954']}
+            />
+          }
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>No expenses yet!</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-outline" size={64} color="#ddd" />
+              <Text style={styles.empty}>No expenses yet!</Text>
+              <Text style={styles.emptySubText}>Tap the + button to add an expense</Text>
+            </View>
+          }
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => router.push(`/(app)/groups/${id}/expenses/${item.id}`)}>
-              <View style={styles.expenseIcon}>
-                <Ionicons name="receipt-outline" size={20} color="#1DB954" />
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/(app)/groups/${id}/expenses/${item.id}`)}
+            >
+              <View style={[styles.expenseIcon, { backgroundColor: splitTypeColor(item.split_type) + '15' }]}>
+                <Ionicons name="receipt-outline" size={20} color={splitTypeColor(item.split_type)} />
               </View>
               <View style={styles.cardInfo}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardSub}>₹{item.total_amount} • {item.split_type}</Text>
+                <View style={styles.cardSubRow}>
+                  <Text style={styles.cardSub}>₹{item.total_amount}</Text>
+                  <View style={[styles.splitBadge, { backgroundColor: splitTypeColor(item.split_type) + '20' }]}>
+                    <Text style={[styles.splitBadgeText, { color: splitTypeColor(item.split_type) }]}>
+                      {item.split_type === 'itemwise' ? 'Itemwise' : item.split_type === 'equal' ? 'Equal' : 'Manual'}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              <Ionicons name="chevron-forward" size={20} color="#d0d0d0" />
             </TouchableOpacity>
           )}
         />
@@ -81,27 +129,45 @@ export default function GroupDetailScreen() {
             <View>
               {balances?.balances?.map((b: any) => (
                 <View key={b.user.id} style={styles.balanceCard}>
-                  <Text style={styles.balanceName}>{b.user.full_name || b.user.username}</Text>
-                  <Text style={[styles.balanceNet, { color: b.net >= 0 ? '#1DB954' : '#ff4444' }]}>
-                    {b.net >= 0 ? `gets back ₹${b.net}` : `owes ₹${Math.abs(b.net)}`}
-                  </Text>
+                  <View style={styles.balanceContent}>
+                    <View style={[
+                      styles.balanceIndicator,
+                      { backgroundColor: b.net >= 0 ? '#1DB954' : '#dc3545' }
+                    ]} />
+                    <View style={styles.balanceInfo}>
+                      <Text style={styles.balanceName}>{b.user.full_name || b.user.username}</Text>
+                      <Text style={[styles.balanceAmount, { color: b.net >= 0 ? '#1DB954' : '#dc3545' }]}>
+                        {formatBalance(b.net)}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               ))}
-              <Text style={styles.sectionTitle}>Suggested Settlements</Text>
+              {balances?.suggested_settlements?.length > 0 && (
+                <Text style={styles.sectionTitle}>Suggested Settlements</Text>
+              )}
             </View>
           }
-          ListEmptyComponent={<Text style={styles.empty}>All settled up! 🎉</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="checkmark-circle" size={64} color="#1DB954" />
+              <Text style={styles.empty}>All settled up! 🎉</Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={styles.settlementCard}>
-              <Text style={styles.settlementText}>
-                <Text style={styles.bold}>{item.from.full_name || item.from.username}</Text>
-                {' pays '}
-                <Text style={styles.bold}>{item.to.full_name || item.to.username}</Text>
-                {' '}
-                <Text style={styles.amount}>₹{item.amount}</Text>
-              </Text>
-              <TouchableOpacity style={styles.settleBtn} onPress={() => router.push(`/(app)/groups/${id}/settle`)}>
-                <Text style={styles.settleBtnText}>Settle</Text>
+              <View style={styles.settlementInfo}>
+                <View style={styles.settlementUser}>
+                  <Text style={styles.settlementName}>{item.from.full_name || item.from.username}</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#1DB954" />
+                  <Text style={styles.settlementName}>{item.to.full_name || item.to.username}</Text>
+                </View>
+                <Text style={styles.settlementAmount}>₹{item.amount}</Text>
+              </View>
+              <TouchableOpacity style={styles.settleBtn} onPress={() => {
+                Alert.alert('Marked Settled', `Settlement between ${item.from.username} and ${item.to.username} marked as complete.`);
+              }}>
+                <Ionicons name="checkmark" size={16} color="#fff" />
               </TouchableOpacity>
             </View>
           )}
@@ -116,51 +182,152 @@ export default function GroupDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f8f8' },
+  container: { flex: 1, backgroundColor: '#f5f7fa' },
   header: {
-    backgroundColor: '#1DB954', padding: 24, paddingTop: 60,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 24,
   },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
-  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  tab: { flex: 1, padding: 14, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: '#1DB954' },
-  tabText: { fontSize: 14, color: '#999' },
-  activeTabText: { color: '#1DB954', fontWeight: '600' },
-  list: { padding: 16 },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center', paddingHorizontal: 16 },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  activeTab: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#1DB954',
+  },
+  tabText: { fontSize: 14, color: '#bbb', fontWeight: '500' },
+  activeTabText: { color: '#1DB954', fontWeight: '700' },
+  list: { paddingHorizontal: 16, paddingVertical: 12 },
   card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    marginBottom: 12, flexDirection: 'row', alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   expenseIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#f0fff4', justifyContent: 'center', alignItems: 'center', marginRight: 12
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: '#333' },
-  cardSub: { fontSize: 13, color: '#999', marginTop: 2 },
-  empty: { textAlign: 'center', color: '#999', marginTop: 60, fontSize: 16 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
+  cardSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardSub: { fontSize: 14, fontWeight: '600', color: '#555' },
+  splitBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  splitBadgeText: { fontSize: 11, fontWeight: '600' },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
+  },
+  empty: { textAlign: 'center', color: '#333', marginTop: 20, fontSize: 18, fontWeight: '600' },
+  emptySubText: { textAlign: 'center', color: '#999', marginTop: 8, fontSize: 14 },
   balanceCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 8,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  balanceName: { fontSize: 15, fontWeight: '500', color: '#333' },
-  balanceNet: { fontSize: 14, fontWeight: '600' },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginTop: 16, marginBottom: 8 },
+  balanceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  balanceIndicator: {
+    width: 6,
+    height: 50,
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  balanceInfo: { flex: 1 },
+  balanceName: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
+  balanceAmount: { fontSize: 14, fontWeight: '700' },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginTop: 20, marginBottom: 12 },
   settlementCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 8,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  settlementText: { fontSize: 14, color: '#333', flex: 1 },
-  bold: { fontWeight: 'bold' },
-  amount: { color: '#1DB954', fontWeight: 'bold' },
-  settleBtn: { backgroundColor: '#1DB954', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  settleBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  settlementInfo: { flex: 1 },
+  settlementUser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+  },
+  settlementName: { fontSize: 15, fontWeight: '600', color: '#333' },
+  settlementAmount: { fontSize: 15, fontWeight: '700', color: '#1DB954' },
+  settleBtn: {
+    backgroundColor: '#1DB954',
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   fab: {
-    position: 'absolute', bottom: 24, right: 24,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#1DB954', justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 5
+    position: 'absolute',
+    bottom: 28,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#1DB954',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1DB954',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });

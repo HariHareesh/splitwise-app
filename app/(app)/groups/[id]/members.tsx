@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../../../stores/api';
 import { ENDPOINTS } from '../../../../constants/api';
 
@@ -29,26 +30,34 @@ export default function MembersScreen() {
   };
 
   const addMember = async (userId: number) => {
+    setLoading(true);
     try {
       await api.post(ENDPOINTS.GROUP_MEMBERS(Number(id)), { user_id: userId });
       setSearchQuery('');
       setSearchResults([]);
-      fetchMembers();
+      await fetchMembers();
       Alert.alert('Success', 'Member added!');
     } catch {
       Alert.alert('Error', 'Failed to add member');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const removeMember = async (userId: number) => {
-    Alert.alert('Remove Member', 'Are you sure?', [
+  const removeMember = async (userId: number, userName: string) => {
+    Alert.alert('Remove Member', `Remove ${userName} from the group?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove', style: 'destructive', onPress: async () => {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
           try {
             await api.delete(ENDPOINTS.GROUP_MEMBER_REMOVE(Number(id), userId));
-            fetchMembers();
-          } catch { Alert.alert('Error', 'Failed to remove member'); }
+            await fetchMembers();
+            Alert.alert('Success', 'Member removed!');
+          } catch {
+            Alert.alert('Error', 'Failed to remove member');
+          }
         }
       }
     ]);
@@ -58,32 +67,66 @@ export default function MembersScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Members</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <LinearGradient
+        colors={['#1DB954', '#1aa84a']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Members</Text>
+          <Text style={styles.memberCount}>{members.length}</Text>
+        </View>
+      </LinearGradient>
 
-      <View style={styles.searchBox}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search users to add..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={searchUsers}
-        />
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={18} color="#1DB954" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Add users..."
+            placeholderTextColor="#bbb"
+            value={searchQuery}
+            onChangeText={searchUsers}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
+              <Ionicons name="close-circle" size={18} color="#bbb" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {searchResults.length > 0 && (
         <View style={styles.searchResults}>
-          {searchResults.map((user) => (
-            <TouchableOpacity key={user.id} style={styles.searchItem} onPress={() => addMember(user.id)}>
-              <Text style={styles.searchItemText}>@{user.username} — {user.full_name}</Text>
-              <Ionicons name="add-circle" size={22} color="#1DB954" />
-            </TouchableOpacity>
-          ))}
+          <FlatList
+            data={searchResults}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.searchItem}
+                onPress={() => addMember(item.id)}
+                disabled={loading}
+              >
+                <View style={styles.searchItemContent}>
+                  <View style={styles.searchAvatar}>
+                    <Text style={styles.searchAvatarText}>
+                      {item.full_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text style={styles.searchItemName}>{item.full_name}</Text>
+                    <Text style={styles.searchItemUsername}>@{item.username}</Text>
+                  </View>
+                </View>
+                <Ionicons name="add-circle" size={24} color="#1DB954" />
+              </TouchableOpacity>
+            )}
+          />
         </View>
       )}
 
@@ -91,20 +134,36 @@ export default function MembersScreen() {
         data={members}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}
+        scrollEnabled={false}
         renderItem={({ item }) => (
           <View style={styles.memberCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{(item.user.full_name || item.user.username)[0].toUpperCase()}</Text>
+            <View style={styles.memberLeft}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {item.user.full_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                </Text>
+              </View>
+              <View style={styles.memberInfo}>
+                <Text style={styles.memberName}>{item.user.full_name}</Text>
+                <Text style={styles.memberUsername}>@{item.user.username}</Text>
+              </View>
             </View>
-            <View style={styles.memberInfo}>
-              <Text style={styles.memberName}>{item.user.full_name || item.user.username}</Text>
-              <Text style={styles.memberRole}>{item.role}</Text>
+            <View style={styles.memberRight}>
+              {item.role === 'admin' && (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield" size={14} color="#1DB954" />
+                  <Text style={styles.adminBadgeText}>Admin</Text>
+                </View>
+              )}
+              {item.role !== 'admin' && (
+                <TouchableOpacity
+                  onPress={() => removeMember(item.user.id, item.user.full_name)}
+                  hitSlop={8}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                </TouchableOpacity>
+              )}
             </View>
-            {item.role !== 'admin' && (
-              <TouchableOpacity onPress={() => removeMember(item.user.id)}>
-                <Ionicons name="remove-circle-outline" size={22} color="#ff4444" />
-              </TouchableOpacity>
-            )}
           </View>
         )}
       />
@@ -113,34 +172,125 @@ export default function MembersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f8f8' },
+  container: { flex: 1, backgroundColor: '#f5f7fa' },
   header: {
-    backgroundColor: '#1DB954', padding: 24, paddingTop: 60,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 24,
   },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  searchBox: { padding: 16 },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
+  memberCount: { fontSize: 14, fontWeight: '600', color: '#fff', backgroundColor: '#ffffff30', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  searchContainer: { paddingHorizontal: 16, paddingTop: 16 },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   searchInput: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 12,
-    fontSize: 15, borderWidth: 1, borderColor: '#eee'
+    flex: 1,
+    marginHorizontal: 10,
+    fontSize: 15,
+    color: '#333',
+    paddingVertical: 0,
   },
-  searchResults: { backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 12, overflow: 'hidden' },
+  searchResults: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   searchItem: {
-    padding: 14, flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0f0f0'
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  searchItemText: { fontSize: 14, color: '#333' },
-  list: { padding: 16 },
+  searchItemContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  searchAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1DB954',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchAvatarText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  searchItemName: { fontSize: 14, fontWeight: '600', color: '#333' },
+  searchItemUsername: { fontSize: 12, color: '#999', marginTop: 2 },
+  list: { paddingHorizontal: 16, paddingVertical: 12 },
   memberCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 14,
-    marginBottom: 10, flexDirection: 'row', alignItems: 'center'
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  memberLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   avatar: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: '#1DB954', justifyContent: 'center', alignItems: 'center', marginRight: 12
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1DB954',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  avatarText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   memberInfo: { flex: 1 },
-  memberName: { fontSize: 15, fontWeight: '600', color: '#333' },
-  memberRole: { fontSize: 12, color: '#999', marginTop: 2, textTransform: 'capitalize' },
+  memberName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
+  memberUsername: { fontSize: 12, color: '#999' },
+  memberRight: {
+    marginLeft: 10,
+  },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fff4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  adminBadgeText: { fontSize: 12, fontWeight: '600', color: '#1DB954' },
 });
