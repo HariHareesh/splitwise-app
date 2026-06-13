@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import api from '../../../stores/api';
-import { ENDPOINTS } from '../../../constants/api';
+import api from '../../stores/api';
+import { ENDPOINTS } from '../../constants/api';
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams();
