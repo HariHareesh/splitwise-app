@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../../stores/api';
 import { ENDPOINTS } from '../../../constants/api';
 
@@ -42,12 +41,7 @@ export default function GroupDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#1DB954', '#1aa84a']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -57,9 +51,8 @@ export default function GroupDetailScreen() {
             <Ionicons name="people-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
-      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, tab === 'expenses' && styles.activeTab]}
@@ -81,14 +74,7 @@ export default function GroupDetailScreen() {
         <FlatList
           data={expenses}
           keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={fetchData}
-              tintColor="#1DB954"
-              colors={['#1DB954']}
-            />
-          }
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} tintColor="#1DB954" colors={['#1DB954']} />}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -98,10 +84,7 @@ export default function GroupDetailScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/(app)/groups/${id}/expenses/${item.id}`)}
-            >
+            <TouchableOpacity style={styles.card} onPress={() => router.push(`/(app)/groups/${id}/expenses/${item.id}`)}>
               <View style={[styles.expenseIcon, { backgroundColor: splitTypeColor(item.split_type) + '15' }]}>
                 <Ionicons name="receipt-outline" size={20} color={splitTypeColor(item.split_type)} />
               </View>
@@ -110,9 +93,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.cardSubRow}>
                   <Text style={styles.cardSub}>₹{item.total_amount}</Text>
                   <View style={[styles.splitBadge, { backgroundColor: splitTypeColor(item.split_type) + '20' }]}>
-                    <Text style={[styles.splitBadgeText, { color: splitTypeColor(item.split_type) }]}>
-                      {item.split_type === 'itemwise' ? 'Itemwise' : item.split_type === 'equal' ? 'Equal' : 'Manual'}
-                    </Text>
+                    <Text style={[styles.splitBadgeText, { color: splitTypeColor(item.split_type) }]}>{item.split_type}</Text>
                   </View>
                 </View>
               </View>
@@ -130,15 +111,10 @@ export default function GroupDetailScreen() {
               {balances?.balances?.map((b: any) => (
                 <View key={b.user.id} style={styles.balanceCard}>
                   <View style={styles.balanceContent}>
-                    <View style={[
-                      styles.balanceIndicator,
-                      { backgroundColor: b.net >= 0 ? '#1DB954' : '#dc3545' }
-                    ]} />
+                    <View style={[styles.balanceIndicator, { backgroundColor: b.net >= 0 ? '#1DB954' : '#dc3545' }]} />
                     <View style={styles.balanceInfo}>
                       <Text style={styles.balanceName}>{b.user.full_name || b.user.username}</Text>
-                      <Text style={[styles.balanceAmount, { color: b.net >= 0 ? '#1DB954' : '#dc3545' }]}>
-                        {formatBalance(b.net)}
-                      </Text>
+                      <Text style={[styles.balanceAmount, { color: b.net >= 0 ? '#1DB954' : '#dc3545' }]}>{formatBalance(b.net)}</Text>
                     </View>
                   </View>
                 </View>
@@ -164,9 +140,7 @@ export default function GroupDetailScreen() {
                 </View>
                 <Text style={styles.settlementAmount}>₹{item.amount}</Text>
               </View>
-              <TouchableOpacity style={styles.settleBtn} onPress={() => {
-                Alert.alert('Marked Settled', `Settlement between ${item.from.username} and ${item.to.username} marked as complete.`);
-              }}>
+              <TouchableOpacity style={styles.settleBtn} onPress={() => router.push(`/(app)/groups/${id}/settle`)}>
                 <Ionicons name="checkmark" size={16} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -183,151 +157,38 @@ export default function GroupDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f7fa' },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 24,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  header: { backgroundColor: '#1DB954', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 24 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 22, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center', paddingHorizontal: 16 },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  activeTab: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#1DB954',
-  },
+  tabsContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  tab: { flex: 1, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  activeTab: { borderBottomWidth: 3, borderBottomColor: '#1DB954' },
   tabText: { fontSize: 14, color: '#bbb', fontWeight: '500' },
   activeTabText: { color: '#1DB954', fontWeight: '700' },
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  expenseIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  expenseIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
-  cardSubRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  cardSubRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardSub: { fontSize: 14, fontWeight: '600', color: '#555' },
-  splitBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
+  splitBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   splitBadgeText: { fontSize: 11, fontWeight: '600' },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 100,
-  },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 100 },
   empty: { textAlign: 'center', color: '#333', marginTop: 20, fontSize: 18, fontWeight: '600' },
   emptySubText: { textAlign: 'center', color: '#999', marginTop: 8, fontSize: 14 },
-  balanceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  balanceContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  balanceIndicator: {
-    width: 6,
-    height: 50,
-    borderRadius: 3,
-    marginRight: 12,
-  },
+  balanceCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  balanceContent: { flexDirection: 'row', alignItems: 'center' },
+  balanceIndicator: { width: 6, height: 50, borderRadius: 3, marginRight: 12 },
   balanceInfo: { flex: 1 },
   balanceName: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
   balanceAmount: { fontSize: 14, fontWeight: '700' },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginTop: 20, marginBottom: 12 },
-  settlementCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+  settlementCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   settlementInfo: { flex: 1 },
-  settlementUser: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
-  },
+  settlementUser: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
   settlementName: { fontSize: 15, fontWeight: '600', color: '#333' },
   settlementAmount: { fontSize: 15, fontWeight: '700', color: '#1DB954' },
-  settleBtn: {
-    backgroundColor: '#1DB954',
-    borderRadius: 10,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#1DB954',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1DB954',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
+  settleBtn: { backgroundColor: '#1DB954', borderRadius: 10, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  fab: { position: 'absolute', bottom: 28, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: '#1DB954', justifyContent: 'center', alignItems: 'center', shadowColor: '#1DB954', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
 });
